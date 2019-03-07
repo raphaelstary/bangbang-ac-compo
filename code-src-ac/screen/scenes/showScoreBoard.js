@@ -55,13 +55,26 @@ export default function showScoreBoard(air, updateFunctions, airState) {
                     Sprites.setY(idx, player.y);
                 }
 
-                const flagView = player.currentLow ? player.flagViewHigh : player.flagViewLow;
-                if (flagView[0]) {
+                const defaultFlagView = player.currentLow ? player.flagViewHigh : player.flagViewLow;
+
+                if (player.flagViewHigh[0] || player.flagViewLow[0]) {
                     // secondary action fired
+
+                    if (player.flagViewHigh[0] && player.flagViewLow[0]) {
+                        defaultFlagView[0] = 0;
+                    } else {
+                        player.flagViewHigh[0] = 0;
+                        player.flagViewLow[0] = 0;
+                    }
                 }
 
-                if (flagView[1]) {
-                    flagView[1] = 0;
+                if (player.flagViewHigh[1] || player.flagViewLow[1]) {
+                    if (player.flagViewHigh[1] && player.flagViewLow[1]) {
+                        defaultFlagView[1] = 0;
+                    } else {
+                        player.flagViewHigh[1] = 0;
+                        player.flagViewLow[1] = 0;
+                    }
 
                     let hit = false;
 
