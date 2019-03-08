@@ -203,11 +203,7 @@ loadAssets.then(processAssets).then(() => {
 
         const player = players.get(id);
         if (player) {
-            if (player.currentLow) {
-                player.setDataHigh(data);
-            } else {
-                player.setDataLow(data);
-            }
+            player.setData(data);
         } else {
             console.warn(`got msg from unknown device ${id}`);
         }
