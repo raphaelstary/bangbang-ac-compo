@@ -9,9 +9,9 @@ import runMyScenes from './scenes/runMyScenes.js';
 import { VERSION_BITS } from '../../code-src-h5x/render/constants/BaseECS.js';
 import createACStub from '../common/createACStub.js';
 import ACPlayer from './ACPlayer.js';
-import { NEXT_SCENE } from '../common/constants/Command.js';
 import { FRAME_BYTE_SIZE } from '../common/constants/Protocol.js';
 import drawBackgroundScene from '../../code-gen-ac/screen/drawBackgroundScene.js';
+import { hasSpeechSynthesis } from '../common/Utterances.js';
 
 loadAssets.then(processAssets).then(() => {
 
@@ -251,5 +251,9 @@ loadAssets.then(processAssets).then(() => {
         airState.disconnectUpdate = true;
     };
 
-    runMyScenes(air, updateFunctions, airState);
+    if (hasSpeechSynthesis()) {
+        runMyScenes(air, updateFunctions, airState, window.speechSynthesis);
+    } else {
+        runMyScenes(air, updateFunctions, airState);
+    }
 });

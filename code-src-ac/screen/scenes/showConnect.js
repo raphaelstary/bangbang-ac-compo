@@ -32,8 +32,9 @@ import {
     DRAW_CARD
 } from '../../../code-gen-ac/screen/SFXSegment.js';
 import Audio from '../../../code-src-h5x/audio/Audio.js';
+import { getUtterance } from '../../common/Utterances.js';
 
-export default function showConnect(air, updateFunctions, airState) {
+export default function showConnect(air, updateFunctions, airState, synth) {
 
 
     function hide(spriteId) {
@@ -265,6 +266,10 @@ export default function showConnect(air, updateFunctions, airState) {
                 cursorCards.forEach(card => {
                     show(card.sprite);
                 });
+
+                if (synth) {
+                    synth.speak(getUtterance('select your color.'));
+                }
             }
 
             if (!playCardsVisible && airState.players.size > 1 && Array.from(airState.players.values()).every(player => player.color != CursorColor.NONE)) {
@@ -278,6 +283,10 @@ export default function showConnect(air, updateFunctions, airState) {
                     [SubImage.CARD_Y, JoinScenePoint.Y]
                 ].map(([subImage, point], index) => drawCard(subImage, point, index * 5)))
                     .then(cards => playCards.push(...cards));
+
+                if (synth) {
+                    synth.speak(getUtterance(`Let's start, whenever you're ready.`));
+                }
             }
 
         } else {
@@ -288,6 +297,11 @@ export default function showConnect(air, updateFunctions, airState) {
 
                 joinPartVisible = true;
                 joinSprites = drawJoinScene();
+
+                if (synth) {
+                    if (synth.speaking)
+                        synth.cancel();
+                }
 
                 Promise.all([
                     [
@@ -379,7 +393,12 @@ export default function showConnect(air, updateFunctions, airState) {
                         SubImage.MEDAL_VIOLET
                     ]
                 ].map((cursorCardInfo, index) => drawCursorCard(cursorCardInfo, index * 5)))
-                    .then(cards => cursorCards.push(...cards));
+                    .then(cards => {
+                        if (synth) {
+                            synth.speak(getUtterance('select your color, to get ready for the tournament.'));
+                        }
+                        return cursorCards.push(...cards);
+                    });
             }
         }
 
@@ -477,7 +496,11 @@ export default function showConnect(air, updateFunctions, airState) {
             const i = slots.size;
             slots.set(player.device, i);
 
-            player.cursor = Sprites.create(SubImage.CURSOR, 0, 0, -4.4999);
+            if (synth) {
+                synth.speak(getUtterance(`Welcome ${player.name}! please shoot at the center to calibrate.`));
+            }
+
+            player.cursor = Sprites.create(SubImage.CURSOR, 0, 0, -4.48);
 
             const doneId = sprites.dict.get(ConnectSceneSprite['DONE_' + i]);
             const doneIdx = Sprites.getIndex(doneId);
@@ -613,6 +636,10 @@ export default function showConnect(air, updateFunctions, airState) {
 
         player.calibrated = true;
 
+        if (synth) {
+            synth.speak(getUtterance(`${player.name} is ${player.colorRef.name}`));
+        }
+
     }
 
 
@@ -628,7 +655,11 @@ export default function showConnect(air, updateFunctions, airState) {
         if (i < connectedPlayers) {
             const player = players[i];
 
-            player.cursor = Sprites.create(SubImage.CURSOR, 0, 0, -4.4999);
+            if (synth) {
+                synth.speak(getUtterance(`Hello ${player.name}`));
+            }
+
+            player.cursor = Sprites.create(SubImage.CURSOR, 0, 0, -4.48);
 
             slots.set(player.device, i);
 
@@ -700,6 +731,13 @@ export default function showConnect(air, updateFunctions, airState) {
         show(pointLeft, -4.4);
         show(pointRight, -4.4);
     });
+
+    if (synth) {
+        const msg = `Your phone is a gun. Yes, you heard right, your phone is a gun. A LUGER pistol to be precise.
+                        Point your gun at the center of your TV and shoot!
+                        BANG, BANG, BANG, BANG, BANG!`;
+        synth.speak(getUtterance(msg));
+    }
 
     let endScene;
     return new Promise(resolve => endScene = resolve);

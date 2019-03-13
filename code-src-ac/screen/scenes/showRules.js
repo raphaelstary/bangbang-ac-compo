@@ -18,18 +18,35 @@ import {
     SHOT,
     DRAW_CARD
 } from '../../../code-gen-ac/screen/SFXSegment.js';
+import { getUtterance } from '../../common/Utterances.js';
 
-export default function showRules(air, updateFunctions, airState) {
+export default function showRules(air, updateFunctions, airState, synth) {
     const {all, dict, removeSprites} = drawRulesScene();
 
     const cards = [];
     const holes = [];
     const RADIUS = assetStore.spriteDimensions[SubImage.BULLET_HOLE * DIM_ELEMENTS];
 
+    const taskQueue = [];
+
+    function wait(ticks) {
+        return new Promise(resolve => taskQueue.push([tick + ticks, resolve]));
+    }
+
+    let tick = 0;
+
     function updateScene() {
 
         if (airState.disconnectUpdate) {
             // todo handle player dropping out
+        }
+
+        for (let i = taskQueue.length - 1; i >= 0; i--) {
+            const [taskTick, resolvePromise] = taskQueue[i];
+            if (taskTick == tick) {
+                taskQueue.splice(i, 1);
+                resolvePromise();
+            }
         }
 
 
@@ -116,6 +133,7 @@ export default function showRules(air, updateFunctions, airState) {
             }
         }
 
+        tick++;
     }
 
     const updateIdx = updateFunctions.push(updateScene) - 1;
@@ -158,10 +176,28 @@ export default function showRules(air, updateFunctions, airState) {
         holes.forEach(remove);
         removeSprites();
 
+        if (synth) {
+            if (synth.speaking)
+                synth.cancel();
+        }
+
         nextScene(Scene.GAME);
     }
 
     drawResumeCard();
+
+    if (synth) {
+        wait(16).then(() => {
+            synth.speak(getUtterance(`O boy. Rules!
+                                    Don't be afraid, it's only Poker, right?
+                                    Just remember, you need to shoot 5 cards.
+                                    Try to hit the same rank over and over again.
+                                    Like 2 Aces or 3 Aces or 4 Aces, you get the point.
+                                    Or get them in a sequence, 2, 3, 4, 5, 6, 7.
+                                    Or even better, shoot just the same suit, only hearts for example.
+                                    Easy, right?! Just have fun. LOL.`));
+        });
+    }
 
     let nextScene;
     return new Promise(resolve => nextScene = resolve);

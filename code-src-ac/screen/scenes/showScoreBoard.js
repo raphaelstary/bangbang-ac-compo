@@ -18,8 +18,9 @@ import {
     SHOT,
     DRAW_CARD
 } from '../../../code-gen-ac/screen/SFXSegment.js';
+import { getUtterance } from '../../common/Utterances.js';
 
-export default function showScoreBoard(air, updateFunctions, airState) {
+export default function showScoreBoard(air, updateFunctions, airState, synth) {
     const {all, dict, removeSprites} = drawScoreBoardScene();
 
     const cards = [];
@@ -167,6 +168,8 @@ export default function showScoreBoard(air, updateFunctions, airState) {
 
     let gameOver = false;
 
+    const leaders = [];
+
     let i = 0;
     for (const player of airState.players.values()) {
 
@@ -201,6 +204,13 @@ export default function showScoreBoard(air, updateFunctions, airState) {
             gameOver = true;
         }
 
+        if (leaders.length == 0 || leaders[0].won == player.won) {
+            leaders.push(player);
+
+        } else if (player.won > leaders[0].won) {
+            leaders.splice(0, leaders.length, player);
+        }
+
         let u = player.won - 1;
 
         while (u >= 0) {
@@ -210,6 +220,47 @@ export default function showScoreBoard(air, updateFunctions, airState) {
         }
 
         i++;
+    }
+
+    if (synth) {
+        if (!gameOver) {
+
+            const multipleWinner = leaders.length > 1;
+            if (multipleWinner) {
+                const newLeader = leaders.some(player => player.roundWinner);
+                if (newLeader) {
+                    synth.speak(getUtterance('now the score is tied!'));
+                } else {
+                    synth.speak(getUtterance('Puh that\'s a real nail-biter!'));
+                }
+            } else {
+                const leader = leaders[0];
+                if (leader.roundWinner) {
+                    if (leader.lastRoundWinner) {
+                        if (leader.roundWinningStreak > 1) {
+                            synth.speak(getUtterance(`wow, ${leader.name} is dominating`));
+                        } else {
+                            synth.speak(getUtterance(`another win for ${leader.name}`));
+                        }
+                    } else {
+                        synth.speak(getUtterance(`${leader.name} took the lead`));
+                    }
+                } else {
+                    synth.speak(getUtterance(`Is there no challenger for ${leader.name}?`));
+                }
+            }
+
+        } else {
+            synth.speak(getUtterance('We have a winner!'));
+        }
+    }
+
+    for (const player of airState.players.values()) {
+        if (!player.roundWinner) {
+            player.roundWinningStreak = 0;
+        }
+        player.lastRoundWinner = player.roundWinner;
+        player.roundWinner = false;
     }
 
     if (gameOver) {

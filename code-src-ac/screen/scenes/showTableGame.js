@@ -32,8 +32,9 @@ import {
     HORN,
     HORN_ALT
 } from '../../../code-gen-ac/screen/SFXSegment.js';
+import { getUtterance } from '../../common/Utterances.js';
 
-export default function showTableGame(air, updateFunctions, airState) {
+export default function showTableGame(air, updateFunctions, airState, synth) {
 
     const {all, dict, removeSprites} = drawGameTableScene();
 
@@ -48,6 +49,11 @@ export default function showTableGame(air, updateFunctions, airState) {
     const numberOfPlayers = Array.from(airState.players.values()).filter(player => player.color != CursorColor.NONE).length;
 
     let rounds;
+
+    if (numberOfPlayers == 0 || numberOfPlayers == 1) {
+        throw new Error('not enough players left');
+    }
+
     // 20 cards / 2 player = 10 cards
     if (numberOfPlayers == 2) {
         rounds = [
@@ -121,12 +127,28 @@ export default function showTableGame(air, updateFunctions, airState) {
 
     const RADIUS = assetStore.spriteDimensions[SubImage.BULLET_HOLE * DIM_ELEMENTS];
 
+    const taskQueue = [];
+
+    function wait(ticks) {
+        return new Promise(resolve => taskQueue.push([tick + ticks, resolve]));
+    }
+
+    let tick = 0;
+
     function updateScene() {
 
         let nextRoundTriggered = false;
 
         if (airState.disconnectUpdate) {
             // todo handle player dropping out
+        }
+
+        for (let i = taskQueue.length - 1; i >= 0; i--) {
+            const [taskTick, resolvePromise] = taskQueue[i];
+            if (taskTick == tick) {
+                taskQueue.splice(i, 1);
+                resolvePromise();
+            }
         }
 
 
@@ -319,7 +341,31 @@ export default function showTableGame(air, updateFunctions, airState) {
                     })))
                 .then(() => {
                     if (rounds.length > 0) {
-                        startRound(rounds.shift());
+
+                        wait(60).then(() => {
+
+                            setCountdownSprite(rounds[0].duration);
+                            const idx = Sprites.getIndex(currentRound);
+                            if (idx != INVALID_INDEX) {
+                                Sprites.setSubImage(idx, SubImage[`NUMBER_S_${currentRoundKey + 1}`]);
+                            }
+
+                            if (synth) {
+                                if (totalRounds == (currentRoundKey + 1)) {
+                                    synth.speak(getUtterance(`last round. ${rounds[0].duration} seconds starting, now`, 1.5));
+
+                                } else {
+                                    synth.speak(getUtterance(`${rounds[0].duration} seconds starting, now`, 1.5));
+                                }
+
+                                wait(120).then(() => {
+                                    startRound(rounds.shift());
+                                });
+                            } else {
+                                startRound(rounds.shift());
+                            }
+                        });
+
 
                     } else {
 
@@ -327,7 +373,10 @@ export default function showTableGame(air, updateFunctions, airState) {
                         {
                             postGame = true;
 
+                            let time = 0;
+
                             const winningSlots = [];
+
 
                             for (const slot of slots.values()) {
                                 if (slot.cards.length == 5) {
@@ -350,12 +399,26 @@ export default function showTableGame(air, updateFunctions, airState) {
                                             winningSlots.push(slot);
                                         }
                                     }
+                                } else {
+                                    if (synth) {
+                                        synth.speak(getUtterance(`${slot.player.name} you need 5 cards.`));
+                                        time += 180;
+                                    }
                                 }
+                            }
+
+                            if (synth && time == 0) {
+                                synth.speak(getUtterance('nice shooting!'));
+                                time += 90;
                             }
 
                             winningSlots.forEach(slot => {
                                 airState.medals.push(slot.player.medal);
                                 slot.player.won++;
+                                slot.player.roundWinner = true;
+                                if (slot.player.lastRoundWinner) {
+                                    slot.player.roundWinningStreak++;
+                                }
                             });
 
                             const secondSlots = [];
@@ -414,36 +477,39 @@ export default function showTableGame(air, updateFunctions, airState) {
                                 }
                             }
 
-                            if (thirdSlots.length > 0) {
-                                showDown(thirdSlots, GameTableSceneSprite.PLACE_3);
-                                if (secondSlots.length > 0)
-                                    nextTasks.push(showDown.bind(undefined, secondSlots, GameTableSceneSprite.PLACE_2));
-                                if (winningSlots.length > 0)
-                                    nextTasks.push(showDown.bind(undefined, winningSlots, GameTableSceneSprite.WON_LABEL));
-                                nextTasks.push(endScene);
+                            wait(time).then(() => {
 
-                            } else if (secondSlots.length > 0) {
-                                showDown(secondSlots, GameTableSceneSprite.PLACE_2);
-                                if (winningSlots.length > 0)
-                                    nextTasks.push(showDown.bind(undefined, winningSlots, GameTableSceneSprite.WON_LABEL));
-                                nextTasks.push(endScene);
+                                if (thirdSlots.length > 0) {
+                                    showDown(thirdSlots, GameTableSceneSprite.PLACE_3, 'third');
+                                    if (secondSlots.length > 0)
+                                        nextTasks.push(showDown.bind(undefined, secondSlots, GameTableSceneSprite.PLACE_2, 'second'));
+                                    if (winningSlots.length > 0)
+                                        nextTasks.push(showDown.bind(undefined, winningSlots, GameTableSceneSprite.WON_LABEL, 'first'));
+                                    nextTasks.push(endScene);
 
-                            } else if (winningSlots.length > 0) {
-                                showDown(winningSlots, GameTableSceneSprite.WON_LABEL);
-                                nextTasks.push(endScene);
+                                } else if (secondSlots.length > 0) {
+                                    showDown(secondSlots, GameTableSceneSprite.PLACE_2, 'second');
+                                    if (winningSlots.length > 0)
+                                        nextTasks.push(showDown.bind(undefined, winningSlots, GameTableSceneSprite.WON_LABEL, 'first'));
+                                    nextTasks.push(endScene);
 
-                            } else {
+                                } else if (winningSlots.length > 0) {
+                                    showDown(winningSlots, GameTableSceneSprite.WON_LABEL, 'first');
+                                    nextTasks.push(endScene);
 
-                                const noWinnerTxt = dict.get(GameTableSceneSprite.NO_WIN);
-                                const noWinnerTxtIdx = Sprites.getIndex(noWinnerTxt);
-                                if (noWinnerTxtIdx != INVALID_INDEX) {
-                                    Sprites.setZ(noWinnerTxtIdx, -4.5);
+                                } else {
+
+                                    const noWinnerTxt = dict.get(GameTableSceneSprite.NO_WIN);
+                                    const noWinnerTxtIdx = Sprites.getIndex(noWinnerTxt);
+                                    if (noWinnerTxtIdx != INVALID_INDEX) {
+                                        Sprites.setZ(noWinnerTxtIdx, -4.5);
+                                    }
+
+                                    drawResumeCard();
+
+                                    nextTasks.push(endScene);
                                 }
-
-                                drawResumeCard();
-
-                                nextTasks.push(endScene);
-                            }
+                            });
                         }
                     }
                 });
@@ -453,6 +519,8 @@ export default function showTableGame(air, updateFunctions, airState) {
             readyForTask = false;
             nextTasks.shift()();
         }
+
+        tick++;
     }
 
     const updateIdx = updateFunctions.push(updateScene) - 1;
@@ -482,7 +550,12 @@ export default function showTableGame(air, updateFunctions, airState) {
 
     const currentShowDown = [];
 
-    function showDown(slots, placeLabelId) {
+    function showDown(slots, placeLabelId, placeName) {
+
+        if (synth) {
+            const names = slots.map(slot => `${slot.player.name} a.k.a. ${slot.player.colorRef.name}`).join(', and ');
+            synth.speak(getUtterance(`the ${placeName} place goes to ${names}, hand is ${slots[0].hand.name}`));
+        }
 
         holes.forEach(remove);
 
@@ -546,7 +619,11 @@ export default function showTableGame(air, updateFunctions, airState) {
                     Sprites.setSubImage(handIdx, SubImage['HAND_RANK_' + slots[0].hand.rank]);
                 }
 
-                drawResumeCard();
+                if (synth) {
+                    wait(120).then(drawResumeCard);
+                } else {
+                    drawResumeCard();
+                }
             });
     }
 
@@ -573,6 +650,28 @@ export default function showTableGame(air, updateFunctions, airState) {
             Audio.playSound(DRAW_CARD);
             cards.push(card);
         });
+    }
+
+    function setCountdownSprite(duration) {
+        const digitMinTenIdx = Sprites.getIndex(timerSprites[3]);
+        if (digitMinTenIdx != INVALID_INDEX) {
+            Sprites.setSubImage(digitMinTenIdx, SubImage.NUMBER_0);
+        }
+
+        const digitMinOneIdx = Sprites.getIndex(timerSprites[2]);
+        if (digitMinOneIdx != INVALID_INDEX) {
+            Sprites.setSubImage(digitMinOneIdx, SubImage.NUMBER_0);
+        }
+
+        const digitTenIdx = Sprites.getIndex(timerSprites[1]);
+        if (digitTenIdx != INVALID_INDEX) {
+            Sprites.setSubImage(digitTenIdx, SubImage['NUMBER_' + Math.floor(duration / 10)]);
+        }
+
+        const digitOneIdx = Sprites.getIndex(timerSprites[0]);
+        if (digitOneIdx != INVALID_INDEX) {
+            Sprites.setSubImage(digitOneIdx, SubImage['NUMBER_' + (duration % 10)]);
+        }
     }
 
     function startCountdown(duration) {
@@ -618,6 +717,7 @@ export default function showTableGame(air, updateFunctions, airState) {
 
     const currentRound = Sprites.create(SubImage.NUMBER_S_1, GameTableScenePoint.ROUND_X.x, GameTableScenePoint.ROUND_X.y, GameTableScenePoint.ROUND_X.z);
     all.add(currentRound);
+    const totalRounds = rounds.length;
     const maxRound = Sprites.create(SubImage['NUMBER_S_' + rounds.length], GameTableScenePoint.ROUND_MAX.x, GameTableScenePoint.ROUND_MAX.y, GameTableScenePoint.ROUND_MAX.z);
     all.add(maxRound);
 
@@ -710,11 +810,6 @@ export default function showTableGame(air, updateFunctions, airState) {
 
         currentRoundKey++;
 
-        const idx = Sprites.getIndex(currentRound);
-        if (idx != INVALID_INDEX) {
-            Sprites.setSubImage(idx, SubImage['NUMBER_S_' + currentRoundKey]);
-        }
-
         const cardPoints = [];
         for (let i = 0; i < patternLength; i++) {
             cardPoints.push(GameTableScenePoint[`P${patternId}_CARD_${i}`]);
@@ -727,7 +822,21 @@ export default function showTableGame(air, updateFunctions, airState) {
             });
     }
 
-    startRound(rounds.shift());
+    setCountdownSprite(rounds[0].duration);
+
+    if (synth) {
+        wait(16).then(() => {
+            synth.speak(getUtterance(`first round! ${rounds[0].duration} seconds starting, now.`, 1.5));
+        });
+        wait(120).then(() => {
+            startRound(rounds.shift());
+        });
+    } else {
+        wait(16).then(() => {
+            startRound(rounds.shift());
+        });
+    }
+
 
     ///////////////////////////// init scene end
 

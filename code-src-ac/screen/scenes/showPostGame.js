@@ -19,8 +19,9 @@ import {
     SHOT,
     DRAW_CARD
 } from '../../../code-gen-ac/screen/SFXSegment.js';
+import { getUtterance } from '../../common/Utterances.js';
 
-export default function showScoreBoard(air, updateFunctions, airState) {
+export default function showScoreBoard(air, updateFunctions, airState, synth) {
     const {all, dict, removeSprites} = drawPostGameScene();
 
     const cards = [];
@@ -179,6 +180,11 @@ export default function showScoreBoard(air, updateFunctions, airState) {
             }
 
             player.won = 0;
+
+            if (synth) {
+                synth.speak(getUtterance(`${player.name} a.k.a. ${player.colorRef.name} won the tournament! Congratulations!`));
+            }
+
         } else {
             player.won = 0;
         }

@@ -40,6 +40,9 @@ export default class ACPlayer {
         this.medal = MEDAL;
         /** @type {number} */
         this.won = 0;
+        this.roundWinner = false;
+        this.lastRoundWinner = false;
+        this.roundWinningStreak = 0;
 
         const buffer = new ArrayBuffer(102);
 
@@ -69,23 +72,67 @@ export default class ACPlayer {
         }
 
         if (this.lastFlagSetLow) {
-            if (this.flagViewHigh[0] != 0)
-                console.warn(`device:${this.device} (${this.name}) overwriting btn flag 0 (high)`);
-            if (this.flagViewHigh[1] != 0)
-                console.warn(`device:${this.device} (${this.name}) overwriting btn flag 1 (high)`);
 
-            this.flagViewHigh[0] = buffer[48];
-            this.flagViewHigh[1] = buffer[49];
+            // now set high flag!
+
+            if (this.flagViewHigh[0] != 0) { // high flag still set
+                if (buffer[48] != 0) { // buffer flag value exists
+                    if (this.flagViewLow[0] != 0) { // alt (low) flag also set
+                        console.warn(`device:${this.device} (${this.name}) overwriting btn flag 0 (high)`);
+                        this.flagViewHigh[0] = buffer[48]; // overwrite existing flag data
+                    } else {
+                        this.flagViewLow[0] = buffer[48];
+                    }
+                }
+            } else {
+                this.flagViewHigh[0] = buffer[48]; // normal case, just set high flag
+            }
+
+            if (this.flagViewHigh[1] != 0) { // high flag still set
+                if (buffer[49] != 0) { // buffer flag value exists
+                    if (this.flagViewLow[1] != 0) { // alt (low) flag also set
+                        console.warn(`device:${this.device} (${this.name}) overwriting btn flag 1 (high)`);
+                        this.flagViewHigh[1] = buffer[49]; // overwrite existing flag data
+                    } else {
+                        this.flagViewLow[1] = buffer[49];
+                    }
+                }
+            } else {
+                this.flagViewHigh[1] = buffer[49]; // normal case, just set high flag
+            }
+
             this.lastFlagSetLow = false;
 
         } else {
-            if (this.flagViewLow[0] != 0)
-                console.warn(`device:${this.device} (${this.name}) overwriting btn flag 0 (low)`);
-            if (this.flagViewLow[1] != 0)
-                console.warn(`device:${this.device} (${this.name}) overwriting btn flag 1 (low)`);
 
-            this.flagViewLow[0] = buffer[48];
-            this.flagViewLow[1] = buffer[49];
+            // now set low flag
+
+            if (this.flagViewLow[0] != 0) { // low flag still set
+                if (buffer[48] != 0) { // buffer flag value exists
+                    if (this.flagViewHigh[0] != 0) { // alt (high) flag also set
+                        console.warn(`device:${this.device} (${this.name}) overwriting btn flag 0 (low)`);
+                        this.flagViewLow[0] = buffer[48]; // overwrite existing flag data
+                    } else {
+                        this.flagViewHigh[0] = buffer[48];
+                    }
+                }
+            } else {
+                this.flagViewLow[0] = buffer[48]; // normal case, just set low flag
+            }
+
+            if (this.flagViewLow[1] != 0) { // low flag still set
+                if (buffer[49] != 0) { // buffer flag value exists
+                    if (this.flagViewHigh[1] != 0) { // alt (high) flag also set
+                        console.warn(`device:${this.device} (${this.name}) overwriting btn flag 1 (low)`);
+                        this.flagViewLow[1] = buffer[49]; // overwrite existing flag data
+                    } else {
+                        this.flagViewHigh[1] = buffer[49];
+                    }
+                }
+            } else {
+                this.flagViewLow[1] = buffer[49]; // normal case, just set low flag
+            }
+
             this.lastFlagSetLow = true;
         }
     }

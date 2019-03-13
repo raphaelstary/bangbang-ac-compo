@@ -1,7 +1,8 @@
 import drawTitleScene from '../../../code-gen-ac/screen/drawTitleScene.js';
 import { CONNECT } from '../../common/constants/Scene.js';
+import { getUtterance } from '../../common/Utterances.js';
 
-export default function showTitle(air, updateFunctions, airState) {
+export default function showTitle(air, updateFunctions, airState, synth) {
     const {removeSprites} = drawTitleScene();
 
     let itIsOver;
@@ -18,6 +19,10 @@ export default function showTitle(air, updateFunctions, airState) {
     }
 
     const updateIdx = updateFunctions.push(handleFirstPlayerConnect) - 1;
+
+    if (synth) {
+        synth.speak(getUtterance('Welcome to Bang Bang Poker'));
+    }
 
     return new Promise(resolve => itIsOver = resolve);
 }
