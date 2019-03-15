@@ -8,11 +8,11 @@ export default function drawRulesScene() {
 
     all.add(Sprites.create(1, 4.595833333333333, 0.6875, -4.5));
 
-    all.add(Sprites.create(121, 4.816666666666666, 3.720833333333333, -4.5));
+    all.add(Sprites.create(114, 4.816666666666666, 3.720833333333333, -4.5));
 
     all.add(Sprites.create(0, -0.4125, -0.30833333333333335, -4.5));
 
-    all.add(Sprites.create(132, -1.8291666666666666, 3.7125, -4.5));
+    all.add(Sprites.create(125, -1.8291666666666666, 3.7125, -4.5));
 
     all.add(Sprites.create(5, -5.570833333333334, 1.9625, -4.5));
 

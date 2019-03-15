@@ -592,9 +592,9 @@ export default function showTableGame(air, updateFunctions, airState, synth) {
                             currentShowDown.push(card.sprite);
 
                             const anim = PositionAnimations.create(card.sprite, 30,
-                                GameTableScenePoint['WIN_C' + i].x,
-                                GameTableScenePoint['WIN_C' + i].y,
-                                GameTableScenePoint['WIN_C' + i].z - index * 0.001,
+                                GameTableScenePoint[`W${index}_C${i}_OF_${array.length}`].x,
+                                GameTableScenePoint[`W${index}_C${i}_OF_${array.length}`].y,
+                                GameTableScenePoint[`W${index}_C${i}_OF_${array.length}`].z,
                                 EASE_IN_QUAD);
 
                             return new Promise(resolve => PositionAnimations.setCallback(anim >> VERSION_BITS, resolve));

@@ -6,7 +6,7 @@ export default function drawJoinScene() {
     const dict = new Map();
     const all = new Set();
 
-    const COLOR_TXT = Sprites.create(116, -2.275, 3.325, -4.5);
+    const COLOR_TXT = Sprites.create(108, -2.275, 3.325, -4.5);
     dict.set(0, COLOR_TXT);
     all.add(COLOR_TXT);
 

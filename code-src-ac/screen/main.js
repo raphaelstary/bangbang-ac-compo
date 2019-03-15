@@ -234,7 +234,8 @@ loadAssets.then(processAssets).then(() => {
         loadProfilePicture(imgURL).then(img => {
             airState.profileUpdate = true;
             player.img = img;
-        });
+        })
+            .catch(reason => console.warn('could not fetch profile picture because: ' + reason));
 
         players.set(id, player);
         addedPlayers.add(player);

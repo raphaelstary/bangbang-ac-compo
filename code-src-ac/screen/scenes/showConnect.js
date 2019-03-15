@@ -514,6 +514,12 @@ export default function showConnect(air, updateFunctions, airState, synth) {
                     if (plusIdx != INVALID_INDEX) {
                         Sprites.setSubImage(plusIdx, assetStore.avatarSubImages.get(player.name));
                     }
+                } else {
+                    const plusId = sprites.dict.get(ConnectSceneSprite['PLUS_' + i]);
+                    const plusIdx = Sprites.getIndex(plusId);
+                    if (plusIdx != INVALID_INDEX) {
+                        Sprites.setSubImage(plusIdx, SubImage.DEFAULT_PIC);
+                    }
                 }
 
                 const phoneId = sprites.dict.get(ConnectSceneSprite['PHONE_' + i]);
@@ -631,7 +637,6 @@ export default function showConnect(air, updateFunctions, airState, synth) {
         const phoneIdx = Sprites.getIndex(phoneId);
         if (phoneIdx != INVALID_INDEX) {
             Sprites.setColor(phoneIdx, player.colorRef.r, player.colorRef.g, player.colorRef.b, 0.5);
-            // Sprites.setSubImage(phoneIdx, phoneImg);
         }
 
         player.calibrated = true;
@@ -677,6 +682,13 @@ export default function showConnect(air, updateFunctions, airState, synth) {
                 if (plusIdx != INVALID_INDEX) {
                     Sprites.setZ(plusIdx, -4.5001);
                     Sprites.setSubImage(plusIdx, assetStore.avatarSubImages.get(player.name));
+                }
+            } else {
+                const plusId = sprites.dict.get(ConnectSceneSprite['PLUS_' + i]);
+                const plusIdx = Sprites.getIndex(plusId);
+                if (plusIdx != INVALID_INDEX) {
+                    Sprites.setZ(plusIdx, -4.5001);
+                    Sprites.setSubImage(plusIdx, SubImage.DEFAULT_PIC);
                 }
             }
 
